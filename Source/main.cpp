@@ -152,6 +152,9 @@ int main(int argc, char* argv[])
     // ---------------------------------
     stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
+
+
+
     float* data = stbi_loadf("Resources/HDR/shanghai_bund_2k.hdr", &width, &height, &nrComponents, 0);
     unsigned int hdrTexture;
     if (data)
@@ -337,8 +340,6 @@ int main(int argc, char* argv[])
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-
     // initialize static shader uniforms before rendering
     // --------------------------------------------------
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -351,7 +352,8 @@ int main(int argc, char* argv[])
     glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
     glViewport(0, 0, scrWidth, scrHeight);
 
-
+    float lightRadius = 10.0f; // Radius of the circular path
+    float lightSpeed = 0.5f;  // Speed of the light's movement
 
     // render loop
     // -----------
@@ -363,6 +365,18 @@ int main(int argc, char* argv[])
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        glm::vec3 lightPositions[4];
+
+        // Place the first light inside the helmet
+
+
+        // Calculate positions for the remaining four lights in a rotating circular path
+        float angle = lightSpeed * currentFrame; // Varying angle over time
+        lightPositions[0] = glm::vec3(lightRadius * cos(angle), 10.0f, lightRadius * sin(angle)); // Moving in the XZ plane
+        lightPositions[1] = glm::vec3(lightRadius * cos(angle + glm::radians(90.0f)), 10.0f, lightRadius * sin(angle + glm::radians(90.0f)));
+        lightPositions[2] = glm::vec3(lightRadius * cos(angle + glm::radians(180.0f)), -10.0f, lightRadius * sin(angle + glm::radians(180.0f)));
+        lightPositions[3] = glm::vec3(lightRadius * cos(angle + glm::radians(270.0f)), -10.0f, lightRadius * sin(angle + glm::radians(270.0f)));
+
         // input
         // -----
         processInput(window);
@@ -372,10 +386,14 @@ int main(int argc, char* argv[])
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+
         PBR.use();
         glm::mat4 view = camera.GetViewMatrix();
         PBR.setMat4("view", view);
         PBR.setVec3("camPos", camera.Position);
+
+
         // bind pre-computed IBL data
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
@@ -394,27 +412,14 @@ int main(int argc, char* argv[])
         glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_2D, AOMap);
         
-        glm::mat4 model = glm::mat4(1.0f);
-        /*
-        for (int row = 0; row < nrRows; ++row)
-        {
-            PBR.setFloat("metallic", (float)row / (float)nrRows);
-            for (int col = 0; col < nrColumns; ++col)
-            {
-                PBR.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
-                model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(
-                    (col - (nrColumns / 2)) * spacing,
-                    (row - (nrRows / 2)) * spacing,
-                    0.0f
-                ));
-                PBR.setMat4("model", model);
-                renderSphere();
-            }
+        for (unsigned int i = 0; i < 4; ++i) {
+            PBR.setVec3("lightPositions[" + std::to_string(i) + "]", lightPositions[i]);
+            PBR.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
         }
-        */
+        
         PBR.use();
         //model = glm::rotate(model, glm::radians(-180.0f), glm::vec3(0, 0, 1.0f));
+        glm::mat4 model = glm::mat4(1.0f);
         model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0));
         model = glm::scale(model, glm::vec3(2.0f));
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
@@ -424,10 +429,10 @@ int main(int argc, char* argv[])
         // render light source (simply re-render sphere at light positions)
         // this looks a bit off as we use the same shader, but it'll make their positions obvious and 
         // keeps the codeprint small.
-        for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
-        {
+
+
+        for (unsigned int i = 0; i < 4; ++i) {
             glm::vec3 newPos = lightPositions[i];
-            newPos = lightPositions[i];
             PBR.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
             PBR.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
 
@@ -437,6 +442,8 @@ int main(int argc, char* argv[])
             PBR.setMat4("model", model);
             renderSphere();
         }
+
+
         Background.use();
         Background.setMat4("view", view);
         glActiveTexture(GL_TEXTURE0);
