@@ -26,8 +26,6 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 //Camera
-//Camera camera(glm::vec3(0.0f,0.0f,10.0f));
-
 Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f);
 float lastX = SCR_WIDTH / 2.0;
 float lastY = SCR_HEIGHT / 2.0;
@@ -48,8 +46,6 @@ glm::mat4 captureViews[] =
     glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 };
 
-
-
 int main(int argc, char* argv[])
 {
     //std::string exePath = std::string(argv[0]).substr(0, std::string(argv[0]).find_last_of('/'));
@@ -64,7 +60,6 @@ int main(int argc, char* argv[])
 //#endif
 
     // glfw window creation
-    // --------------------
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "PBROpenGL", NULL, NULL);
     glfwMakeContextCurrent(window);
     if (window == NULL)
@@ -81,7 +76,6 @@ int main(int argc, char* argv[])
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     // glad: load all OpenGL function pointers
-    // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -89,10 +83,8 @@ int main(int argc, char* argv[])
     }
 
     // configure global opengl state
-    // -----------------------------
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    //glEnable(GL_CULL_FACE);
     // enable seamless cubemap sampling for lower mip levels in the pre-filter map.
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
@@ -117,25 +109,29 @@ int main(int argc, char* argv[])
     Background.use();
     Background.setInt("environmentMap", 0);
 
-    //Model gun((exePath + "\\model\\gun\\Cerberus_LP.FBX"));
-    //unsigned int albedoMap = loadTexture((exePath + "\\model\\gun\\Textures\\Cerberus_A.tga").c_str());
-    //unsigned int metallicMap = loadTexture((exePath + "\\model\\gun\\Textures\\Cerberus_M.tga").c_str());
-    //unsigned int roughnessMap = loadTexture((exePath + "\\model\\gun\\Textures\\Cerberus_R.tga").c_str());
-    //unsigned int normalMap = loadTexture((exePath + "\\model\\gun\\Textures\\Cerberus_N.tga").c_str());
-
     Model DamagedHelmet("Resources/PBR/DamagedHelmet/DamagedHelmet.gltf");
     unsigned int albedoMap = loadTexture("Resources/PBR/DamagedHelmet/Default_albedo.jpg");
     unsigned int metallicMap = loadTexture("Resources/PBR/DamagedHelmet/Default_emissive.jpg");
     unsigned int roughnessMap = loadTexture("Resources/PBR/DamagedHelmet/Default_metalRoughness.jpg");
     unsigned int normalMap = loadTexture("Resources/PBR/DamagedHelmet/Default_normal.jpg");
     unsigned int AOMap = loadTexture("Resources/PBR/DamagedHelmet/Default_AO.jpg");
+
+    //Uncomment the textures/model of the backpack to use it.
+    //Adjusting (Rotation,Translation,Scaling) the BackPack model is essential to ensure it faces the camera aesthetically 
+
+    //Model DamagedHelmet("Resources/PBR/backpack/BackPack.fbx");
+    //unsigned int albedoMap = loadTexture("Resources/PBR/backpack/albedo.jpg");
+    //unsigned int metallicMap = loadTexture("Resources/PBR/backpack/metallic.jpg");
+    //unsigned int roughnessMap = loadTexture("Resources/PBR/backpack/roughness.jpg");
+    //unsigned int normalMap = loadTexture("Resources/PBR/backpack/normal.png");
+    //unsigned int AOMap = loadTexture("Resources/PBR/backpack/AO.jpg");
+
     // lights
-    // ------
     glm::vec3 lightPositions[] = {
-        glm::vec3(-10.0f,  10.0f, 10.0f),
-        glm::vec3(10.0f,  10.0f, 10.0f),
-        glm::vec3(-10.0f, -10.0f, 10.0f),
-        glm::vec3(10.0f, -10.0f, 10.0f),
+        glm::vec3(-1.0,  1.0, 1.0),
+        glm::vec3(1.0,  1.0, 1.0),
+        glm::vec3(-1.0, -1.0, 1.0),
+        glm::vec3(1.0, -1.0, 1.0),
     };
     glm::vec3 lightColors[] = {
         glm::vec3(300.0f, 300.0f, 300.0f),
@@ -144,7 +140,6 @@ int main(int argc, char* argv[])
         glm::vec3(300.0f, 300.0f, 300.0f)
     };
     
-
     //Setup Framebuffer and Renderbuffer for HDR to Cubemap Conversion
     unsigned int captureFbo;
     unsigned int captureRbo;
@@ -155,8 +150,6 @@ int main(int argc, char* argv[])
     glBindRenderbuffer(GL_RENDERBUFFER, captureRbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRbo);
-
-
 
     // HDR Map Processing
     std::vector<std::string> hdrPaths = {
@@ -325,7 +318,6 @@ int main(int argc, char* argv[])
     float lightSpeed = 0.5f;  // Speed of the light's movement
 
     // render loop
-    // -----------
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
@@ -335,9 +327,6 @@ int main(int argc, char* argv[])
 
         glm::vec3 lightPositions[4];
 
-        // Place the first light inside the helmet
-
-
         // Calculate positions for the remaining four lights in a rotating circular path
         float angle = lightSpeed * currentFrame; // Varying angle over time
         lightPositions[0] = glm::vec3(lightRadius * cos(angle), 10.0f, lightRadius * sin(angle)); // Moving in the XZ plane
@@ -346,11 +335,9 @@ int main(int argc, char* argv[])
         lightPositions[3] = glm::vec3(lightRadius * cos(angle + glm::radians(270.0f)), -10.0f, lightRadius * sin(angle + glm::radians(270.0f)));
 
         // input
-        // -----
         processInput(window);
 
         // render
-        // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -381,18 +368,16 @@ int main(int argc, char* argv[])
         }
         
         PBR.use();
-        //model = glm::rotate(model, glm::radians(-180.0f), glm::vec3(0, 0, 1.0f));
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0));
-        model = glm::scale(model, glm::vec3(2.0f));
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0)); //rotates the model 
+        model = glm::scale(model, glm::vec3(1.5f));//scales the model equally over all dimensions
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));//translates the model 
         PBR.setMat4("model", model);
         DamagedHelmet.Draw(PBR);
 
         // render light source (simply re-render sphere at light positions)
         // this looks a bit off as we use the same shader, but it'll make their positions obvious and 
         // keeps the codeprint small.
-
 
         for (unsigned int i = 0; i < 4; ++i) {
             glm::vec3 newPos = lightPositions[i];
@@ -405,7 +390,6 @@ int main(int argc, char* argv[])
             PBR.setMat4("model", model);
             renderSphere();
         }
-
 
         Background.use();
         Background.setMat4("view", view);
@@ -454,7 +438,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
             lastY = ypos;
             firstMouse = false;
         }
-        float xoffset = xpos - lastX;
+        float xoffset = lastX - xpos;
         float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
         lastX = xpos;
         lastY = ypos;
@@ -471,7 +455,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
-
 
 unsigned int loadTexture(const char* path)
 {
@@ -509,7 +492,6 @@ unsigned int loadTexture(const char* path)
 
     return textureID;
 }
-
 
 //render sphere
 unsigned int sphereVAO = 0;
@@ -681,9 +663,7 @@ void renderCube()
     glBindVertexArray(0);
 }
 
-
 // renderQuad() renders a 1x1 XY quad in NDC
-// -----------------------------------------
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
 void renderQuad()

@@ -8,14 +8,15 @@
 #include <glm/gtx/quaternion.hpp>
 
 // Default camera values
+//Edit to change camera properties
 const float ORBIT_RADIUS = 5.0f;
 const float SPEED = 5.0f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
-const float MIN_RADIUS = 1.0f;
+const float MIN_RADIUS = 1.0f;  
 const float MAX_RADIUS = 20.0f;
 
-// Camera class definition
+
 class Camera {
 public:
     // Camera attributes
@@ -28,7 +29,6 @@ public:
     float MouseSensitivity;
     float Zoom;
 
-    // Constructor
     Camera(glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f), float radius = ORBIT_RADIUS)
         : Target(target), Radius(radius), Orientation(glm::quat(glm::vec3(0.0f, 0.0f, 0.0f))),
         MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
@@ -47,18 +47,11 @@ public:
         return glm::lookAt(cameraPos, Target, up);
     }
 
-    // Processes input received from any keyboard-like input system
-    //void ProcessKeyboard(Camera_Movement direction, float deltaTime) {
-    //    // In an orbital camera, we typically do not move the camera itself via keyboard
-    //    // This function can be implemented to adjust the target or orbit behavior if needed
-    //}
-
-    // Processes mouse movement to update the camera's orientation
     void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true) {
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
 
-        // Create quaternions for yaw (rotation around Y-axis) and pitch (rotation around X-axis)
+        // Quaternions for yaw (rotation around Y-axis) and pitch (rotation around X-axis)
         glm::quat qYaw = glm::angleAxis(glm::radians(xoffset), glm::vec3(0.0f, 1.0f, 0.0f));
         glm::quat qPitch = glm::angleAxis(glm::radians(yoffset), glm::vec3(1.0f, 0.0f, 0.0f));
 
