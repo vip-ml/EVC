@@ -132,12 +132,15 @@ int main(int argc, char* argv[])
         glm::vec3(300.0f, 300.0f, 300.0f),
         glm::vec3(300.0f, 300.0f, 300.0f)
     };
-    int nrRows = 7;
-    int nrColumns = 7;
-    float spacing = 2.5;
+    
+
+
+
+
 
     // pbr: setup framebuffer
     // ----------------------
+    //Setup Framebuffer and Renderbuffer for HDR to Cubemap Conversion
     unsigned int captureFbo;
     unsigned int captureRbo;
     glGenFramebuffers(1, &captureFbo);
@@ -148,13 +151,16 @@ int main(int argc, char* argv[])
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRbo);
 
+
+
+
+
+
     // pbr: load the HDR environment map
     // ---------------------------------
+    // Load HDR Image and Create 2D Texture
     stbi_set_flip_vertically_on_load(true);
     int width, height, nrComponents;
-
-
-
     float* data = stbi_loadf("Resources/HDR/shanghai_bund_2k.hdr", &width, &height, &nrComponents, 0);
     unsigned int hdrTexture;
     if (data)
@@ -175,8 +181,12 @@ int main(int argc, char* argv[])
         std::cout << "Failed to load HDR image." << std::endl;
     }
 
+
+
+
     // pbr: setup cubemap to render to and attach to framebuffer
     // ---------------------------------------------------------
+    //Create and Configure the Cubemap
     unsigned int envCubemap;
     glGenTextures(1, &envCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
@@ -190,8 +200,14 @@ int main(int argc, char* argv[])
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+
+
+
+
+
     // pbr: set up projection and view matrices for capturing data onto the 6 cubemap face directions
     // ----------------------------------------------------------------------------------------------
+    //Setup Projection and View Matrices for Cubemap Faces
     glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 captureViews[] =
     {
@@ -203,6 +219,10 @@ int main(int argc, char* argv[])
         glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
     };
 
+
+
+
+    // Convert HDR to Cubemap
     ToCubemap.use();
     ToCubemap.setInt("equirectangularMap", 0);
     ToCubemap.setMat4("projection", captureProjection);
@@ -220,12 +240,16 @@ int main(int argc, char* argv[])
         renderCube();
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+    //Generate Mipmaps for the Cubemap
     // then let OpenGL generate mipmaps from first mip face (combatting visible dots artifact)
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 
+
+
+
+    //Compute Irradiance Map
     unsigned int irradianceMap;
     glGenTextures(1, &irradianceMap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
@@ -263,6 +287,11 @@ int main(int argc, char* argv[])
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+
+
+
+
     // pbr: create a pre-filter cubemap, and re-scale capture FBO to pre-filter scale.
     // --------------------------------------------------------------------------------
     unsigned int prefilterMap;
@@ -280,6 +309,10 @@ int main(int argc, char* argv[])
     // generate mipmaps for the cubemap so OpenGL automatically allocates the required memory.
     glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
+
+
+
+    //Compute Prefilter Map
     // pbr: run a quasi monte-carlo simulation on the environment lighting to create a prefilter (cube)map.
     // ----------------------------------------------------------------------------------------------------
     prefilterShader.use();
@@ -313,6 +346,12 @@ int main(int argc, char* argv[])
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+
+
+
+
+    //Generate BRDF LUT Texture
     // pbr: generate a 2D LUT from the BRDF equations used.
     // ----------------------------------------------------
     unsigned int brdfLUTTexture;
@@ -340,6 +379,11 @@ int main(int argc, char* argv[])
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+
+
+
+    //Initialize Shader Uniforms and Set Viewport
     // initialize static shader uniforms before rendering
     // --------------------------------------------------
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
