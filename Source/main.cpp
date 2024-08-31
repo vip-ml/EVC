@@ -1,22 +1,18 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
 #include <Shader.h>
 #include <Camera.h>
 #include <Model.h>
-
 #include <iostream>
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadTexture(const char* path);
 void processInput(GLFWwindow* window);
@@ -30,9 +26,11 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 //Camera
-Camera camera(glm::vec3(0.0f,0.0f,10.0f));
-float lastX = 800.0f / 2.0;
-float lastY = 600.0 / 2.0;
+//Camera camera(glm::vec3(0.0f,0.0f,10.0f));
+
+Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), 5.0f);
+float lastX = SCR_WIDTH / 2.0;
+float lastY = SCR_HEIGHT / 2.0;
 bool firstMouse = true;
 
 // timing
@@ -147,11 +145,6 @@ int main(int argc, char* argv[])
     };
     
 
-
-
-
-    // pbr: setup framebuffer
-    // ----------------------
     //Setup Framebuffer and Renderbuffer for HDR to Cubemap Conversion
     unsigned int captureFbo;
     unsigned int captureRbo;
@@ -167,9 +160,9 @@ int main(int argc, char* argv[])
 
     // HDR Map Processing
     std::vector<std::string> hdrPaths = {
-        "Resources/HDR/lilienstein_2k.hdr",
+        "Resources/HDR/shanghai_bund_2k.hdr",
         "Resources/HDR/newport_loft.hdr",
-        "Resources/HDR/shanghai_bund_2k.hdr"
+        "Resources/HDR/lilienstein_2k.hdr"
     };
 
     std::vector<unsigned int> hdrTextures(3);
@@ -272,10 +265,11 @@ int main(int argc, char* argv[])
         glBindFramebuffer(GL_FRAMEBUFFER, captureFbo);
         unsigned int mipLevels = 5;
         for (unsigned int mip = 0; mip < mipLevels; ++mip) {
-            unsigned int mipWidth = 128 * std::pow(0.5, mip);
-            unsigned int mipHeight = 128 * std::pow(0.5, mip);
+            unsigned int mipWidth = static_cast<unsigned int>(128 * std::pow(0.5, mip));
+            unsigned int mipHeight = static_cast<unsigned int>(128 * std::pow(0.5, mip));
             glViewport(0, 0, mipWidth, mipHeight);
             glBindFramebuffer(GL_FRAMEBUFFER, captureFbo);
+
             for (unsigned int j = 0; j < 6; ++j) {
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + j, prefilterMaps[i], mip);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -289,8 +283,6 @@ int main(int argc, char* argv[])
     }
 
     //Generate BRDF LUT Texture
-    // pbr: generate a 2D LUT from the BRDF equations used.
-    // ----------------------------------------------------
     unsigned int brdfLUTTexture;
     glGenTextures(1, &brdfLUTTexture);
 
@@ -319,8 +311,6 @@ int main(int argc, char* argv[])
 
 
     //Initialize Shader Uniforms and Set Viewport
-    // initialize static shader uniforms before rendering
-    // --------------------------------------------------
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     PBR.use();
     PBR.setMat4("projection", projection);
@@ -339,7 +329,6 @@ int main(int argc, char* argv[])
     while (!glfwWindowShouldClose(window))
     {
         // per-frame time logic
-        // --------------------
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -365,20 +354,15 @@ int main(int argc, char* argv[])
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+        glm::mat4 view = camera.GetViewMatrix();
 
         PBR.use();
-        glm::mat4 view = camera.GetViewMatrix();
+        PBR.setMat4("projection", projection);
         PBR.setMat4("view", view);
-        PBR.setVec3("camPos", camera.Position);
+        //PBR.setVec3("camPos", camera.Position);
+        glm::vec3 cameraPosition = camera.Target - glm::rotate(camera.Orientation, glm::vec3(0.0f, 0.0f, -1.0f)) * camera.Radius;
+        PBR.setVec3("camPos", cameraPosition);
 
-
-        // bind pre-computed IBL data
-        //glActiveTexture(GL_TEXTURE0);
-        //glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
-        //glActiveTexture(GL_TEXTURE1);
-        //glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
-        //glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, albedoMap);
@@ -430,35 +414,19 @@ int main(int argc, char* argv[])
         renderCube();
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
     // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
         hdrMapIndex = 0;
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
@@ -468,7 +436,6 @@ void processInput(GLFWwindow* window)
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and 
@@ -478,24 +445,26 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
-    float xpos = static_cast<float>(xposIn);
-    float ypos = static_cast<float>(yposIn);
-
-    if (firstMouse)
-    {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        float xpos = static_cast<float>(xposIn);
+        float ypos = static_cast<float>(yposIn);
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
+        float xoffset = xpos - lastX;
+        float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
         lastX = xpos;
         lastY = ypos;
-        firstMouse = false;
+        camera.ProcessMouseMovement(xoffset, yoffset);
     }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-    lastX = xpos;
-    lastY = ypos;
-
-    camera.ProcessMouseMovement(xoffset, yoffset);
-
+    else
+    {
+        // Reset firstMouse flag when the button is released to avoid unwanted jumps
+        firstMouse = true;
+    }
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -543,8 +512,6 @@ unsigned int loadTexture(const char* path)
 
 
 //render sphere
-//https://www.jb51.net/article/254487.htm
-
 unsigned int sphereVAO = 0;
 unsigned int indexCount;
 void renderSphere()

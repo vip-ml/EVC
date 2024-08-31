@@ -43,6 +43,13 @@
     <Image Include="Resources\PBR\DamagedHelmet\Default_metalRoughness.jpg" />
     <Image Include="Resources\PBR\DamagedHelmet\Default_normal.jpg" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Dependencies\include\Camera.h" />
+    <ClInclude Include="Dependencies\include\mesh.h" />
+    <ClInclude Include="Dependencies\include\Model.h" />
+    <ClInclude Include="Dependencies\include\Shader.h" />
+    <ClInclude Include="Dependencies\include\stb_image.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
