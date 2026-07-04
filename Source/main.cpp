@@ -104,14 +104,14 @@ int main(int argc, char* argv[])
     PBR.setInt("metallicMap",4);
     PBR.setInt("roughnessMap",5);
     PBR.setInt("normalMap", 6);
-    PBR.setInt("AOMap", 7);
+    PBR.setInt("aoMap", 7);
 
     Background.use();
     Background.setInt("environmentMap", 0);
 
     Model DamagedHelmet("Resources/PBR/DamagedHelmet/DamagedHelmet.gltf");
     unsigned int albedoMap = loadTexture("Resources/PBR/DamagedHelmet/Default_albedo.jpg");
-    unsigned int metallicMap = loadTexture("Resources/PBR/DamagedHelmet/Default_emissive.jpg");
+    unsigned int metallicMap = loadTexture("Resources/PBR/DamagedHelmet/Default_metalRoughness.jpg");
     unsigned int roughnessMap = loadTexture("Resources/PBR/DamagedHelmet/Default_metalRoughness.jpg");
     unsigned int normalMap = loadTexture("Resources/PBR/DamagedHelmet/Default_normal.jpg");
     unsigned int AOMap = loadTexture("Resources/PBR/DamagedHelmet/Default_AO.jpg");
@@ -126,20 +126,7 @@ int main(int argc, char* argv[])
     //unsigned int normalMap = loadTexture("Resources/PBR/backpack/normal.png");
     //unsigned int AOMap = loadTexture("Resources/PBR/backpack/AO.jpg");
 
-    // lights
-    glm::vec3 lightPositions[] = {
-        glm::vec3(-1.0,  1.0, 1.0),
-        glm::vec3(1.0,  1.0, 1.0),
-        glm::vec3(-1.0, -1.0, 1.0),
-        glm::vec3(1.0, -1.0, 1.0),
-    };
-    glm::vec3 lightColors[] = {
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f)
-    };
-    
+
     //Setup Framebuffer and Renderbuffer for HDR to Cubemap Conversion
     unsigned int captureFbo;
     unsigned int captureRbo;
@@ -314,9 +301,6 @@ int main(int argc, char* argv[])
     glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
     glViewport(0, 0, scrWidth, scrHeight);
 
-    float lightRadius = 10.0f; // Radius of the circular path
-    float lightSpeed = 0.5f;  // Speed of the light's movement
-
     // render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -324,15 +308,6 @@ int main(int argc, char* argv[])
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
-        glm::vec3 lightPositions[4];
-
-        // Calculate positions for the remaining four lights in a rotating circular path
-        float angle = lightSpeed * currentFrame; // Varying angle over time
-        lightPositions[0] = glm::vec3(lightRadius * cos(angle), 10.0f, lightRadius * sin(angle)); // Moving in the XZ plane
-        lightPositions[1] = glm::vec3(lightRadius * cos(angle + glm::radians(90.0f)), 10.0f, lightRadius * sin(angle + glm::radians(90.0f)));
-        lightPositions[2] = glm::vec3(lightRadius * cos(angle + glm::radians(180.0f)), -10.0f, lightRadius * sin(angle + glm::radians(180.0f)));
-        lightPositions[3] = glm::vec3(lightRadius * cos(angle + glm::radians(270.0f)), -10.0f, lightRadius * sin(angle + glm::radians(270.0f)));
 
         // input
         processInput(window);
@@ -350,6 +325,11 @@ int main(int argc, char* argv[])
         glm::vec3 cameraPosition = camera.Target - glm::rotate(camera.Orientation, glm::vec3(0.0f, 0.0f, -1.0f)) * camera.Radius;
         PBR.setVec3("camPos", cameraPosition);
 
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMaps[hdrMapIndex]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMaps[hdrMapIndex]);
+        glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, albedoMap);
@@ -362,10 +342,6 @@ int main(int argc, char* argv[])
         glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_2D, AOMap);
         
-        for (unsigned int i = 0; i < 4; ++i) {
-            PBR.setVec3("lightPositions[" + std::to_string(i) + "]", lightPositions[i]);
-            PBR.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-        }
         
         PBR.use();
         glm::mat4 model = glm::mat4(1.0f);
@@ -375,21 +351,7 @@ int main(int argc, char* argv[])
         PBR.setMat4("model", model);
         DamagedHelmet.Draw(PBR);
 
-        // render light source (simply re-render sphere at light positions)
-        // this looks a bit off as we use the same shader, but it'll make their positions obvious and 
-        // keeps the codeprint small.
 
-        for (unsigned int i = 0; i < 4; ++i) {
-            glm::vec3 newPos = lightPositions[i];
-            PBR.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
-            PBR.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, newPos);
-            model = glm::scale(model, glm::vec3(0.5f));
-            PBR.setMat4("model", model);
-            renderSphere();
-        }
 
         Background.use();
         Background.setMat4("view", view);
