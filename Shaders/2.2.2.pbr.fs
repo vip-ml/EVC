@@ -10,6 +10,7 @@ uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
+uniform sampler2D emissiveMap;
 
 // IBL
 uniform samplerCube irradianceMap;
@@ -129,7 +130,8 @@ void main()
 
     vec3 ambient = (kD * diffuse + specular) * ao;
 
-    vec3 color = ambient + Lo;
+    vec3 emissive = pow(texture(emissiveMap, TexCoords).rgb, vec3(2.2));
+    vec3 color = ambient + Lo + emissive;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));

@@ -15,6 +15,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadTexture(const char* path);
+unsigned int loadBlackTexture();
 void processInput(GLFWwindow* window);
 void renderSphere();
 void renderCube();
@@ -105,6 +106,7 @@ int main(int argc, char* argv[])
     PBR.setInt("roughnessMap",5);
     PBR.setInt("normalMap", 6);
     PBR.setInt("aoMap", 7);
+    PBR.setInt("emissiveMap", 8);
 
     Background.use();
     Background.setInt("environmentMap", 0);
@@ -115,6 +117,7 @@ int main(int argc, char* argv[])
     unsigned int roughnessMap = loadTexture("Resources/PBR/DamagedHelmet/Default_metalRoughness.jpg");
     unsigned int normalMap = loadTexture("Resources/PBR/DamagedHelmet/Default_normal.jpg");
     unsigned int AOMap = loadTexture("Resources/PBR/DamagedHelmet/Default_AO.jpg");
+    unsigned int emissiveMap = loadTexture("Resources/PBR/DamagedHelmet/Default_emissive.jpg");
 
     //Uncomment the textures/model of the backpack to use it.
     //Adjusting (Rotation,Translation,Scaling) the BackPack model is essential to ensure it faces the camera aesthetically 
@@ -125,6 +128,7 @@ int main(int argc, char* argv[])
     //unsigned int roughnessMap = loadTexture("Resources/PBR/backpack/roughness.jpg");
     //unsigned int normalMap = loadTexture("Resources/PBR/backpack/normal.png");
     //unsigned int AOMap = loadTexture("Resources/PBR/backpack/AO.jpg");
+    //unsigned int emissiveMap = loadBlackTexture();
 
 
     //Setup Framebuffer and Renderbuffer for HDR to Cubemap Conversion
@@ -341,6 +345,8 @@ int main(int argc, char* argv[])
         glBindTexture(GL_TEXTURE_2D, normalMap);
         glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_2D, AOMap);
+        glActiveTexture(GL_TEXTURE8);
+        glBindTexture(GL_TEXTURE_2D, emissiveMap);
         
         
         PBR.use();
@@ -452,6 +458,20 @@ unsigned int loadTexture(const char* path)
         stbi_image_free(data);
     }
 
+    return textureID;
+}
+
+unsigned int loadBlackTexture()
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    unsigned char blackPixel[] = { 0, 0, 0, 255 };
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, blackPixel);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     return textureID;
 }
 
